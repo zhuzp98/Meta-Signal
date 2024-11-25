@@ -2,8 +2,8 @@
 // © rhapsodyz
 
 //@version=5
-indicator(title         = "[Z] Meta-Signal Beta 0.1.0", 
-     shorttitle         = "Meta-Signal b0.1", 
+indicator(title         = "[Z] Meta-Signal Lite Beta 0.1.0", 
+     shorttitle         = "Meta Lite Beta", 
      overlay            = true,
      max_bars_back      = 1000, 
      max_lines_count    = 400, 
@@ -13,26 +13,26 @@ indicator(title         = "[Z] Meta-Signal Beta 0.1.0",
 // === Parameters ===
 // ##################
 
-prd                 = input.int(5, title = "Pivot Period", minval = 1, maxval = 50)
-source              = input.string("VWMA", title = "Source for Pivot Points", options = ["Close", "High/Low", "VWMA"])
-src                 = input(hlc3, title = "Source for VWMA")
-searchdiv           = input.string("Regular", title = "Divergence Type", options = ["Regular", "Hidden", "Regular/Hidden"])
-showlimit           = input.int(5, title="Minimum Number of Divergence", minval = 1, maxval = 12)
-maxpp               = input.int(10, title = "Maximum Pivot Points to Check", minval = 1, maxval = 20)
-maxbars             = input.int(100, title = "Maximum Bars to Check", minval = 30, maxval = 200)
+pivot_prd           = input.int(5, title = "Pivot Period", minval = 1, maxval = 50)
+pivot_base          = input.string("VWMA", title = "Source for Pivot Points", options = ["Close", "High/Low", "VWMA"])
+vwma_source         = input(hlc3, title = "Source for VWMA")
+div_type            = input.string("Regular", title = "Divergence Type", options = ["Regular", "Hidden", "Regular/Hidden"])
+div_limit           = input.int(5, title="Minimum Number of Divergence", minval = 1, maxval = 12)
+pivot_max           = input.int(10, title = "Maximum Pivot Points to Check", minval = 1, maxval = 20)
+bar_max             = input.int(100, title = "Maximum Bars to Check", minval = 30, maxval = 200)
 dontconfirm         = input.bool(false, title = "Don't Wait for Confirmation")
-calcmacd            = input.bool(true, title = "MACD")
-calcmacda           = input.bool(true, title = "MACD Histogram")
-calcrsi             = input.bool(true, title = "RSI")
-calcstoc            = input.bool(true, title = "Stochastic")
-calccci             = input.bool(true, title = "CCI")
-calcmom             = input.bool(true, title = "Momentum")
-calcobv             = input.bool(true, title = "OBV")
-calcvwmacd          = input.bool(true, title = "VWmacd")
-calccmf             = input.bool(true, title = "Chaikin Money Flow")
-calcmfi             = input.bool(true, title = "Money Flow Index")
-calcsmi             = input.bool(true, title = "Stochastic Momentum Index")
-calcext             = input.bool(false, title = "Check External Indicator")
+cal_macd            = input.bool(true, title = "MACD")
+cal_macdhist        = input.bool(true, title = "MACD Histogram")
+cal_rsi             = input.bool(true, title = "RSI")
+cal_stoch           = input.bool(true, title = "Stochastic")
+cal_cci             = input.bool(true, title = "CCI")
+cal_mom             = input.bool(true, title = "Momentum")
+cal_obv             = input.bool(true, title = "OBV")
+cal_vwmacd          = input.bool(true, title = "VWmacd")
+cal_cmf             = input.bool(true, title = "Chaikin Money Flow")
+cal_mfi             = input.bool(true, title = "Money Flow Index")
+cal_smi             = input.bool(true, title = "Stochastic Momentum Index")
+cal_exti            = input.bool(false, title = "Check External Indicator")
 externalindi        = input(close, title = "External Indicator")
 
 // ########################
@@ -50,7 +50,7 @@ Mfi     = ta.mfi(close, 14) // Moneyt Flow Index
 [macd, signal, macdhist] = ta.macd(close, 12, 26, 9) // MACD
 
 // SMI
-emaEma(source, length) => ta.ema(ta.ema(source, length), length)
+emaEma(pivot_base, length) => ta.ema(ta.ema(pivot_base, length), length)
 highestHigh         = ta.highest(10)
 lowestLow           = ta.lowest(10)
 smi                 = 200 * (emaEma(close - (highestHigh + lowestLow) / 2, 10) / emaEma(highestHigh - lowestLow, 10))
@@ -78,14 +78,14 @@ else
     int(900/secondsInTf)
 
 // Volume Weighted Exponential Moving Average
-vwema(src, len)=>
-    ta.ema(src * volume, len) / ta.ema(volume, len)
+vwema(vwma_source, len)=>
+    ta.ema(vwma_source * volume, len) / ta.ema(volume, len)
 
-vwmaP = vwema(src, vwemalen)
+vwmaP = vwema(vwma_source, vwemalen)
 
 // vwmaP = ta.vwma(hlc3, 20)
-float ph = ta.pivothigh((source == "VWMA" ? vwmaP : (source == "Close" ? close : high)), prd, prd)
-float pl = ta.pivotlow((source == "VWMA" ? vwmaP : (source == "Close" ? close : low)), prd, prd)
+float ph = ta.pivothigh((pivot_base == "VWMA" ? vwmaP : (pivot_base == "Close" ? close : high)), pivot_prd, pivot_prd)
+float pl = ta.pivotlow((pivot_base == "VWMA" ? vwmaP : (pivot_base == "Close" ? close : low)), pivot_prd, pivot_prd)
 
 // keep values and positions of Pivot Highs/Lows in the arrays
 var int maxarraysize = 20
@@ -120,15 +120,14 @@ if not na(pl)
 // cond == 1 => positive_regular, cond == 2=> negative_hidden
 positive_regular_positive_hidden_divergence(src, cond)=>
     divlen = 0
-    prsc = source == "VWMA" ? vwmaP : (source == "Close" ? close : low)
+    prsc = pivot_base == "VWMA" ? vwmaP : (pivot_base == "Close" ? close : low)
     // if indicators higher than last value and close price is higher than las close 
     if dontconfirm or src > src[1] or close > close[1]
         startpoint = dontconfirm ? 0 : 1 // don't check last candle
         // we search last 15 PPs
-        for x = 0 to maxpp - 1
-            len = bar_index - array.get(pl_positions, x) + prd
+        for x = 0 to pivot_max -           len = bar_index - array.get(pl_positions, x) + pivot_prd
             // if we reach non valued array element or arrived 101. or previous bars then we don't search more
-            if array.get(pl_positions, x) == 0 or len > maxbars
+            if array.get(pl_positions, x) == 0 or len > bar_max
                 break
             if len > 5 and 
                ((cond == 1 and src[startpoint] > src[len] and prsc[startpoint] < nz(array.get(pl_vals, x))) or
@@ -154,15 +153,14 @@ positive_regular_positive_hidden_divergence(src, cond)=>
 // cond == 1 => negative_regular, cond == 2=> positive_hidden
 negative_regular_negative_hidden_divergence(src, cond)=>
     divlen = 0
-    prsc = source == "VWMA" ? vwmaP : (source == "Close" ? close : high)
+    prsc = pivot_base == "VWMA" ? vwmaP : (pivot_base == "Close" ? close : high)
     // if indicators higher than last value and close price is higher than las close 
     if dontconfirm or src < src[1] or close < close[1]
         startpoint = dontconfirm ? 0 : 1 // don't check last candle
         // we search last 15 PPs
-        for x = 0 to maxpp - 1
-            len = bar_index - array.get(ph_positions, x) + prd
+        for x = 0 to pivot_max -           len = bar_index - array.get(ph_positions, x) + pivot_prd
             // if we reach non valued array element or arrived 101. or previous bars then we don't search more
-            if array.get(ph_positions, x) == 0 or len > maxbars
+            if array.get(ph_positions, x) == 0 or len > bar_max
                 break
             if len > 5 and 
                ((cond == 1 and src[startpoint] < src[len] and prsc[startpoint] > nz(array.get(ph_vals, x))) or 
@@ -187,10 +185,10 @@ negative_regular_negative_hidden_divergence(src, cond)=>
 // calculate 4 types of divergence if enabled in the options and return divergences in an array
 calculate_divs(cond, indicator)=>
     divs = array.new_int(4, 0)
-    array.set(divs, 0, cond and (searchdiv == "Regular" or searchdiv == "Regular/Hidden") ? positive_regular_positive_hidden_divergence(indicator, 1) : 0)
-    array.set(divs, 1, cond and (searchdiv == "Regular" or searchdiv == "Regular/Hidden") ? negative_regular_negative_hidden_divergence(indicator, 1) : 0)
-    array.set(divs, 2, cond and (searchdiv == "Hidden" or searchdiv == "Regular/Hidden")  ? positive_regular_positive_hidden_divergence(indicator, 2) : 0)
-    array.set(divs, 3, cond and (searchdiv == "Hidden" or searchdiv == "Regular/Hidden")  ? negative_regular_negative_hidden_divergence(indicator, 2) : 0)
+    array.set(divs, 0, cond and (div_type == "Regular" or div_type == "Regular/Hidden") ? positive_regular_positive_hidden_divergence(indicator, 1) : 0)
+    array.set(divs, 1, cond and (div_type == "Regular" or div_type == "Regular/Hidden") ? negative_regular_negative_hidden_divergence(indicator, 1) : 0)
+    array.set(divs, 2, cond and (div_type == "Hidden" or div_type == "Regular/Hidden")  ? positive_regular_positive_hidden_divergence(indicator, 2) : 0)
+    array.set(divs, 3, cond and (div_type == "Hidden" or div_type == "Regular/Hidden")  ? negative_regular_negative_hidden_divergence(indicator, 2) : 0)
     divs
 
 // array to keep all divergences
@@ -201,25 +199,25 @@ array_set_divs(div_pointer, index)=>
         array.set(all_divergences, index * 4 + x, array.get(div_pointer, x))
 
 // set divergences array 
-array_set_divs(calculate_divs(calcmacd, macd), 0)
-array_set_divs(calculate_divs(calcmacda, macdhist), 1)
-array_set_divs(calculate_divs(calcrsi, rsi), 2)
-array_set_divs(calculate_divs(calcstoc, stk), 3)
-array_set_divs(calculate_divs(calccci, cci), 4)
-array_set_divs(calculate_divs(calcmom, moment), 5)
-array_set_divs(calculate_divs(calcobv, Obv), 6)
-array_set_divs(calculate_divs(calcvwmacd, vwmacd), 7)
-array_set_divs(calculate_divs(calccmf, cmf), 8)
-array_set_divs(calculate_divs(calcmfi, Mfi), 9)
-array_set_divs(calculate_divs(calcsmi, smi), 10)
-array_set_divs(calculate_divs(calcext, externalindi), 11)
+array_set_divs(calculate_divs(cal_macd, macd), 0)
+array_set_divs(calculate_divs(cal_macdhist, dhist), 1)
+array_set_divs(calculate_divs(cal_rsi, rsi), 2)
+array_set_divs(calculate_divs(cal_stoch, stk), 3)
+array_set_divs(calculate_divs(cal_cci, cci), 4)
+array_set_divs(calculate_divs(cal_mom, moment), 5)
+array_set_divs(calculate_divs(cal_obv, Obv), 6)
+array_set_divs(calculate_divs(cal_vwmacd, vwmacd), 7)
+array_set_divs(calculate_divs(cal_cmf, cmf), 8)
+array_set_divs(calculate_divs(cal_mfi, Mfi), 9)
+array_set_divs(calculate_divs(cal_smi, smi), 10)
+array_set_divs(calculate_divs(cal_exti, externalindi), 11)
 
-// check minimum number of divergence, if less than showlimit then delete all divergence
+// check minimum number of divergence, if less than div_limit then delete all divergence
 total_div = 0
 for x = 0 to array.size(all_divergences) - 1
     total_div := total_div + math.round(math.sign(array.get(all_divergences, x)))
 
-if total_div < showlimit
+if total_div < div_limit
     array.fill(all_divergences, 0)
 
 
@@ -259,8 +257,8 @@ alertcondition(neg_reg_div_detected or neg_hid_div_detected, title='Negative Div
 // === Plots ===
 // #############
 
-seriesNeg = searchdiv == "Regular" ? neg_reg_div_detected : (searchdiv == "Hidden" ? neg_hid_div_detected : (neg_reg_div_detected or neg_hid_div_detected))
-seriesPos = searchdiv == "Regular" ? pos_reg_div_detected : (searchdiv == "Hidden" ? pos_hid_div_detected : (pos_reg_div_detected or pos_hid_div_detected))
+seriesNeg = div_type == "Regular" ? neg_reg_div_detected : (div_type == "Hidden" ? neg_hid_div_detected : (neg_reg_div_detected or neg_hid_div_detected))
+seriesPos = div_type == "Regular" ? pos_reg_div_detected : (div_type == "Hidden" ? pos_hid_div_detected : (pos_reg_div_detected or pos_hid_div_detected))
 plotshape(seriesNeg,  title = "Down",  location=location.abovebar, color=color.rgb(241, 222, 15),  style=shape.labeldown, size = size.small, display = display.pane)
 plotshape(seriesPos,  title = "Up",  location=location.belowbar, color=color.rgb(145, 222, 106), style=shape.labelup, size = size.small, display = display.pane)
 
