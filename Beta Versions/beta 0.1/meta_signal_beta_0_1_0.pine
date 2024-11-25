@@ -13,27 +13,27 @@ indicator(title         = "[Z] Meta-Signal Lite Beta 0.1.0",
 // === Parameters ===
 // ##################
 
-pivot_prd           = input.int(5, title = "Pivot Period", minval = 1, maxval = 50)
-pivot_base          = input.string("VWMA", title = "Source for Pivot Points", options = ["Close", "High/Low", "VWMA"])
-vwma_source         = input(hlc3, title = "Source for VWMA")
-div_type            = input.string("Regular", title = "Divergence Type", options = ["Regular", "Hidden", "Regular/Hidden"])
-div_limit           = input.int(5, title="Minimum Number of Divergence", minval = 1, maxval = 12)
-pivot_max           = input.int(10, title = "Maximum Pivot Points to Check", minval = 1, maxval = 20)
-bar_max             = input.int(100, title = "Maximum Bars to Check", minval = 30, maxval = 200)
-dontconfirm         = input.bool(false, title = "Don't Wait for Confirmation")
-cal_macd            = input.bool(true, title = "MACD")
-cal_macdhist        = input.bool(true, title = "MACD Histogram")
-cal_rsi             = input.bool(true, title = "RSI")
-cal_stoch           = input.bool(true, title = "Stochastic")
-cal_cci             = input.bool(true, title = "CCI")
-cal_mom             = input.bool(true, title = "Momentum")
-cal_obv             = input.bool(true, title = "OBV")
-cal_vwmacd          = input.bool(true, title = "VWmacd")
-cal_cmf             = input.bool(true, title = "Chaikin Money Flow")
-cal_mfi             = input.bool(true, title = "Money Flow Index")
-cal_smi             = input.bool(true, title = "Stochastic Momentum Index")
-cal_exti            = input.bool(false, title = "Check External Indicator")
-externalindi        = input(close, title = "External Indicator")
+pivot_base          = input.string("VWMA", title = "Source for Pivot Points", options = ["Close", "High/Low", "VWMA"], group = "Pivot Piont", tooltip = "VWEMA is used for VWMA")
+vwma_source         = input(hlc3, title = "Source for VWMA", group = "Pivot Piont", tooltip = "If VWMA is selected above. hlc3/ohlc4/close are recommanded.")
+pivot_prd           = input.int(5, title = "Pivot Period", minval = 1, maxval = 50, group = "Pivot Piont")
+pivot_max           = input.int(10, title = "Maximum Pivot Points to Check", minval = 1, maxval = 20, group = "Pivot Piont")
+bar_max             = input.int(100, title = "Maximum Bars to Check", minval = 30, maxval = 200, group = "Pivot Piont")
+div_type            = input.string("Regular/Hidden", title = "Divergence Type", options = ["Regular", "Hidden", "Regular/Hidden"], group = "Divergence")
+div_limit           = input.int(5, title="Minimum Number of Divergence", minval = 1, maxval = 12, group = "Divergence")
+dontconfirm         = input.bool(false, title = "Don't Wait for Confirmation", group = "Divergence")
+cal_macd            = input.bool(true, title = "MACD", group = "Indicator")
+cal_macdhist        = input.bool(true, title = "MACD Histogram", group = "Indicator")
+cal_rsi             = input.bool(true, title = "RSI", group = "Indicator")
+cal_stoch           = input.bool(true, title = "Stochastic", group = "Indicator")
+cal_cci             = input.bool(true, title = "CCI", group = "Indicator")
+cal_mom             = input.bool(true, title = "Momentum", group = "Indicator")
+cal_obv             = input.bool(true, title = "OBV", group = "Indicator")
+cal_vwmacd          = input.bool(true, title = "VWmacd", group = "Indicator")
+cal_cmf             = input.bool(true, title = "Chaikin Money Flow", group = "Indicator")
+cal_mfi             = input.bool(true, title = "Money Flow Index", group = "Indicator")
+cal_smi             = input.bool(true, title = "Stochastic Momentum Index", group = "Indicator")
+cal_exti            = input.bool(false, title = "Check External Indicator", group = "Indicator", inline = " ")
+externalindi        = input(close, title = "External Indicator", group = "Indicator", inline = " ")
 
 // ########################
 // === Basic Indicators ===
@@ -43,17 +43,13 @@ rsi     = ta.rsi(close, 14) // RSI
 moment  = ta.mom(close, 10) // Momentum
 cci     = ta.cci(close, 10) // CCI
 Obv     = ta.obv // OBV
-stk     = ta.sma(ta.stoch(close, high, low, 14), 3) // Stoch
-maFast  = ta.vwma(close, 12), maSlow = ta.vwma(close, 26), vwmacd = maFast - maSlow // volume weighted macd
-Cmfm    = ((close-low) - (high-close)) / (high - low), Cmfv = Cmfm * volume, cmf = ta.sma(Cmfv, 21) / ta.sma(volume,21) // Chaikin money flow
+stk     = ta.sma(ta.stoch(close, high, low, 14), 3) // Stochastic
+maFast  = ta.vwma(close, 12), maSlow = ta.vwma(close, 26), vwmacd = maFast - maSlow // Volume Weighted MACD
+Cmfm    = ((close-low) - (high-close)) / (high - low), Cmfv = Cmfm * volume, cmf = ta.sma(Cmfv, 21) / ta.sma(volume,21) // Chaikin Money Flow
 Mfi     = ta.mfi(close, 14) // Moneyt Flow Index
 [macd, signal, macdhist] = ta.macd(close, 12, 26, 9) // MACD
-
-// SMI
 emaEma(pivot_base, length) => ta.ema(ta.ema(pivot_base, length), length)
-highestHigh         = ta.highest(10)
-lowestLow           = ta.lowest(10)
-smi                 = 200 * (emaEma(close - (highestHigh + lowestLow) / 2, 10) / emaEma(highestHigh - lowestLow, 10))
+smi     = 200 * (emaEma(close - (ta.highest(10) + ta.lowest(10)) / 2, 10) / emaEma(ta.highest(10) - ta.lowest(10), 10)) // SMI
 
 // ##############
 // === Pivots ===
@@ -125,7 +121,8 @@ positive_regular_positive_hidden_divergence(src, cond)=>
     if dontconfirm or src > src[1] or close > close[1]
         startpoint = dontconfirm ? 0 : 1 // don't check last candle
         // we search last 15 PPs
-        for x = 0 to pivot_max -           len = bar_index - array.get(pl_positions, x) + pivot_prd
+        for x = 0 to pivot_max - 1
+            len = bar_index - array.get(pl_positions, x) + pivot_prd
             // if we reach non valued array element or arrived 101. or previous bars then we don't search more
             if array.get(pl_positions, x) == 0 or len > bar_max
                 break
@@ -158,7 +155,8 @@ negative_regular_negative_hidden_divergence(src, cond)=>
     if dontconfirm or src < src[1] or close < close[1]
         startpoint = dontconfirm ? 0 : 1 // don't check last candle
         // we search last 15 PPs
-        for x = 0 to pivot_max -           len = bar_index - array.get(ph_positions, x) + pivot_prd
+        for x = 0 to pivot_max - 1
+            len = bar_index - array.get(ph_positions, x) + pivot_prd
             // if we reach non valued array element or arrived 101. or previous bars then we don't search more
             if array.get(ph_positions, x) == 0 or len > bar_max
                 break
@@ -200,7 +198,7 @@ array_set_divs(div_pointer, index)=>
 
 // set divergences array 
 array_set_divs(calculate_divs(cal_macd, macd), 0)
-array_set_divs(calculate_divs(cal_macdhist, dhist), 1)
+array_set_divs(calculate_divs(cal_macdhist, macdhist), 1)
 array_set_divs(calculate_divs(cal_rsi, rsi), 2)
 array_set_divs(calculate_divs(cal_stoch, stk), 3)
 array_set_divs(calculate_divs(cal_cci, cci), 4)
