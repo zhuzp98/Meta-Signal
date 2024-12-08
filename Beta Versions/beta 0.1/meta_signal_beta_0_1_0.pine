@@ -256,6 +256,8 @@ alertcondition(neg_reg_div_detected or neg_hid_div_detected, title='Negative Div
 // === Plots ===
 // #############
 
+plot(vwmaP, title="VWEMA", color=color.rgb(110, 138, 216), linewidth = 2)
+
 seriesNeg = div_type == "Regular" ? neg_reg_div_detected : (div_type == "Hidden" ? neg_hid_div_detected : (neg_reg_div_detected or neg_hid_div_detected))
 seriesPos = div_type == "Regular" ? pos_reg_div_detected : (div_type == "Hidden" ? pos_hid_div_detected : (pos_reg_div_detected or pos_hid_div_detected))
 plotshape(seriesNeg,  title = "Down",  location=location.abovebar, color=color.rgb(241, 222, 15),  style=shape.labeldown, size = size.small, display = display.pane)
